@@ -2,6 +2,18 @@
   "name": "patient-notes-api",
   "version": "1.0.0",
   "description": "Minimal REST API used to demonstrate containerisation, CI and Kubernetes deployment",
+  "author": {
+    "name": "Vitalis Ibekwe",
+    "email": "99427790+VitalisCode@users.noreply.github.com",
+    "url": "https://github.com/VitalisCode"
+  },
+  "contributors": [
+    {
+      "name": "Vitalis Ibekwe",
+      "email": "99427790+VitalisCode@users.noreply.github.com",
+      "url": "https://github.com/VitalisCode"
+    }
+  ],
   "main": "src/server.js",
   "private": true,
   "engines": {
