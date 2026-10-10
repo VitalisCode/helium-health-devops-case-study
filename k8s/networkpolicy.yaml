@@ -1,0 +1,45 @@
+# 1) Deny everything by default in the namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: patient-notes
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# 2) Allow only what patient-notes-api needs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: patient-notes-api
+  namespace: patient-notes
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: patient-notes-api
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Only the ingress controller may reach the app port.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS only. The service has no other outbound dependencies.
+    # If a database is added, add a narrowly-scoped rule for it here.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

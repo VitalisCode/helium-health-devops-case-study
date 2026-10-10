@@ -1,0 +1,2 @@
+github_repository = "your-org/your-repo"
+environment       = "staging"

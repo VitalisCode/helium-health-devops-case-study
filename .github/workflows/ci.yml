@@ -1,0 +1,120 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref (saves minutes on rapid PR pushes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default to read-only; jobs elevate only what they need.
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'patient-notes-api' }}
+
+jobs:
+  lint-test:
+    name: Lint & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  build-scan-push:
+    name: Build, scan & push image
+    needs: lint-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write           # OIDC to AWS (no long-lived keys)
+      security-events: write    # upload Trivy SARIF to the Security tab
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build once, load into the local daemon so we can scan BEFORE anything is pushed.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: app
+          file: docker/Dockerfile
+          load: true
+          push: false
+          tags: local/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Gate: fail the build on fixable HIGH/CRITICAL vulnerabilities.
+      - name: Trivy scan (gate)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      # Report: SARIF for visibility in the GitHub Security tab (never fails the job).
+      - name: Trivy scan (SARIF report)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Upload SARIF
+        if: always() && github.event_name == 'push'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      # --- Push only from main: PRs (especially from forks) get no cloud credentials. ---
+      - name: Configure AWS credentials (OIDC)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Placeholder: set repo variable AWS_CI_ROLE_ARN to the role output by Terraform.
+          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          SRC="local/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          DST="${REGISTRY}/${ECR_REPOSITORY}"
+          docker tag "$SRC" "${DST}:${IMAGE_TAG}"      # immutable: commit SHA
+          docker tag "$SRC" "${DST}:main"              # moving convenience tag
+          docker push "${DST}:${IMAGE_TAG}"
+          docker push "${DST}:main"
+          echo "Pushed ${DST}:${IMAGE_TAG}" >> "$GITHUB_STEP_SUMMARY"

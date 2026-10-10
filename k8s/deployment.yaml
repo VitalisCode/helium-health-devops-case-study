@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patient-notes-api
+  namespace: patient-notes
+  labels:
+    app.kubernetes.io/name: patient-notes-api
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0   # never drop below desired capacity during a rollout
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-notes-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: patient-notes-api
+    spec:
+      serviceAccountName: patient-notes-api
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Spread replicas across nodes so one node failure doesn't take the service down.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: patient-notes-api
+      containers:
+        - name: api
+          # Replaced by kustomize `images:` at deploy time (tag = commit SHA).
+          image: ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/patient-notes-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: patient-notes-api-config
+            - secretRef:
+                name: patient-notes-api-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Small delay so the endpoint is removed from the Service before SIGTERM.
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: patient-notes-api
+  namespace: patient-notes
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-notes-api
