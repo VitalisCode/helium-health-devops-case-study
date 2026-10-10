@@ -3,7 +3,6 @@ kind: Namespace
 metadata:
   name: patient-notes
   labels:
-    app.kubernetes.io/part-of: platform
     # Pod Security Admission: reject pods that violate the "restricted" profile.
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
@@ -14,7 +13,5 @@ kind: ServiceAccount
 metadata:
   name: patient-notes-api
   namespace: patient-notes
-  labels:
-    app.kubernetes.io/name: patient-notes-api
 # The app never calls the Kubernetes API, so don't mount a token.
 automountServiceAccountToken: false

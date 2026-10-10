@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: patient-notes-api
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1" # after External Secrets (CRDs) and the platform setup
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/OWNER/REPO.git # REPLACE
+    targetRevision: main
+    path: k8s/app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: patient-notes
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true # ExternalSecret CRDs may not exist on first sync
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

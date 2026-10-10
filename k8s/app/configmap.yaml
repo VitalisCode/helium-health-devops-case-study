@@ -3,10 +3,8 @@ kind: ConfigMap
 metadata:
   name: patient-notes-api-config
   namespace: patient-notes
-  labels:
-    app.kubernetes.io/name: patient-notes-api
 data:
   SERVICE_NAME: patient-notes-api
-  APP_ENV: staging
+  APP_ENV: production
   PORT: "8080"
   LOG_LEVEL: info
