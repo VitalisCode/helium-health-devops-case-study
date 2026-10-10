@@ -43,8 +43,11 @@ function createApp() {
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {
+    if (err.type === 'entity.parse.failed') {
+      return res.status(400).json({ error: 'invalid JSON' });
+    }
     console.error(err);
-    res.status(500).json({ error: 'internal server error' });
+    return res.status(500).json({ error: 'internal server error' });
   });
 
   return app;

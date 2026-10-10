@@ -1,0 +1,20 @@
+# Limits what the platform apps may pull from and deploy to.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1" # exists before the apps that use it
+spec:
+  description: Platform add-ons and services on this cluster
+  sourceRepos:
+    - https://github.com/OWNER/REPO.git # REPLACE
+    - https://charts.external-secrets.io
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  # Platform apps create namespaces, CRDs and cluster-scoped resources.
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

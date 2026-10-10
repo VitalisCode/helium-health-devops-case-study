@@ -1,4 +1,4 @@
-# 1) Deny everything by default in the namespace.
+# Default-deny, then allow only what the service needs.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -8,7 +8,6 @@ spec:
   podSelector: {}
   policyTypes: [Ingress, Egress]
 ---
-# 2) Allow only what patient-notes-api needs.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -20,24 +19,20 @@ spec:
       app.kubernetes.io/name: patient-notes-api
   policyTypes: [Ingress, Egress]
   ingress:
-    # Only the ingress controller may reach the app port.
+    # ALB (target-type ip) and kubelet probes originate from inside the VPC.
+    # 10.0.0.0/16 = terraform/shared var vpc_cidr.
     - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+        - ipBlock:
+            cidr: 10.0.0.0/16
       ports:
         - protocol: TCP
           port: 8080
   egress:
-    # DNS only. The service has no other outbound dependencies.
-    # If a database is added, add a narrowly-scoped rule for it here.
+    # DNS only: Auto Mode serves cluster DNS from the .10 address of the service CIDR
+    # (172.20.0.0/16 is pinned in terraform/service/eks.tf). No other outbound dependencies.
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
+        - ipBlock:
+            cidr: 172.20.0.10/32
       ports:
         - protocol: UDP
           port: 53

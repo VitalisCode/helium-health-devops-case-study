@@ -11,7 +11,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0   # never drop below desired capacity during a rollout
+      maxUnavailable: 0 
       maxSurge: 1
   selector:
     matchLabels:
@@ -28,22 +28,20 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
-        fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
-      # Spread replicas across nodes so one node failure doesn't take the service down.
+
       topologySpreadConstraints:
         - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
+          topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: patient-notes-api
       containers:
         - name: api
-          # Replaced by kustomize `images:` at deploy time (tag = commit SHA).
-          image: ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/patient-notes-api:latest
-          imagePullPolicy: IfNotPresent
+          
+          image: patient-notes-api
           ports:
             - name: http
               containerPort: 8080
@@ -57,19 +55,20 @@ spec:
               cpu: 100m
               memory: 128Mi
             limits:
-              cpu: 500m
-              memory: 256Mi
+              memory: 256Mi 
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+
           startupProbe:
             httpGet:
               path: /healthz
               port: http
             periodSeconds: 2
             failureThreshold: 15
+
           livenessProbe:
             httpGet:
               path: /healthz
@@ -77,6 +76,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
+
           readinessProbe:
             httpGet:
               path: /readyz
@@ -86,9 +86,9 @@ spec:
             failureThreshold: 3
           lifecycle:
             preStop:
-              # Small delay so the endpoint is removed from the Service before SIGTERM.
+              
               exec:
-                command: ["sh", "-c", "sleep 5"]
+                command: ["sh", "-c", "sleep 10"]
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

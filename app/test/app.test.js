@@ -51,6 +51,16 @@ test('POST without name is rejected', async () => {
   assert.strictEqual(res.status, 400);
 });
 
+test('POST with malformed JSON is rejected', async () => {
+  const res = await fetch(`${base}/api/v1/items`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{"name":',
+  });
+  assert.strictEqual(res.status, 400);
+  assert.deepStrictEqual(await res.json(), { error: 'invalid JSON' });
+});
+
 test('unknown item returns 404', async () => {
   const res = await fetch(`${base}/api/v1/items/9999`);
   assert.strictEqual(res.status, 404);

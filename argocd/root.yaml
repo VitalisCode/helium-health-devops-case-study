@@ -1,0 +1,20 @@
+# Applied ONCE by hand after installing Argo CD (see README). From then on Argo CD
+# manages everything under argocd/apps from git, including changes to these files.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/OWNER/REPO.git # REPLACE
+    targetRevision: main
+    path: argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
