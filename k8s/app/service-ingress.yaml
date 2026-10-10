@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: patient-notes-api
+  namespace: patient-notes
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: patient-notes-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Auto Mode creates the ALB from this Ingress. Certificates, scheme and target type
+# come from the IngressClassParams in k8s/platform. Point the DNS name at the ALB hostname
+# shown by `kubectl -n patient-notes get ingress`.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: patient-notes-api
+  namespace: patient-notes
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /readyz
+spec:
+  ingressClassName: alb
+  rules:
+    - host: notes-api.example.com # = terraform var domain_name
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: patient-notes-api
+                port:
+                  name: http

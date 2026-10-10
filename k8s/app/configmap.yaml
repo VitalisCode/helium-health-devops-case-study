@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: patient-notes-api-config
+  namespace: patient-notes
+data:
+  SERVICE_NAME: patient-notes-api
+  APP_ENV: production
+  PORT: "8080"
+  LOG_LEVEL: info

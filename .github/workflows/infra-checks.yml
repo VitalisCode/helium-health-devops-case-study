@@ -1,0 +1,52 @@
+name: infra-checks
+
+# Static checks for everything that is not application code. No cloud credentials needed.
+on:
+  pull_request:
+    paths:
+      - terraform/**
+      - k8s/**
+      - argocd/**
+      - .github/workflows/infra-checks.yml
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform ${{ matrix.stack }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [shared, service]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.10"
+      - run: terraform fmt -check -recursive -diff
+        working-directory: terraform
+      - run: terraform init -backend=false -input=false
+        working-directory: terraform/${{ matrix.stack }}
+      - run: terraform validate
+        working-directory: terraform/${{ matrix.stack }}
+
+  manifests:
+    name: Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+      - name: Install Kustomize
+        run: |
+          curl -fsSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.6.0/kustomize_v5.6.0_linux_amd64.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP" kustomize
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      # CRD-based kinds (ExternalSecret, IngressClassParams, Argo CD) have no built-in schema: skipped.
+      - name: Validate k8s/app
+        run: kustomize build k8s/app | ./kubeconform -strict -summary -ignore-missing-schemas
+      - name: Validate k8s/platform and argocd
+        run: ./kubeconform -strict -summary -ignore-missing-schemas k8s/platform argocd

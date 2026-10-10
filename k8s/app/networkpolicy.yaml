@@ -1,0 +1,40 @@
+# Default-deny, then allow only what the service needs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: patient-notes
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: patient-notes-api
+  namespace: patient-notes
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: patient-notes-api
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # ALB (target-type ip) and kubelet probes originate from inside the VPC.
+    # 10.0.0.0/16 = terraform/shared var vpc_cidr.
+    - from:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS only: Auto Mode serves cluster DNS from the .10 address of the service CIDR
+    # (172.20.0.0/16 is pinned in terraform/service/eks.tf). No other outbound dependencies.
+    - to:
+        - ipBlock:
+            cidr: 172.20.0.10/32
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
