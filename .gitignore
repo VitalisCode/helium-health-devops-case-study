@@ -1,0 +1,10 @@
+node_modules/
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform/backend.hcl
+terraform/terraform.tfvars
+*.auto.tfvars
+.env
+.env.*
+coverage/
