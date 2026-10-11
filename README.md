@@ -90,7 +90,8 @@ grep -rl 'OWNER/REPO' argocd | xargs sed -i 's#OWNER/REPO#your-org/your-repo#'
 **1. Shared stack** (creates the state bucket, then moves its own state into it):
 ```bash
 cd terraform/shared
-cp dev.tfvars terraform.tfvars     # set state_bucket_name, github_repository
+# Use terraform.tfvars for your development values. Create it if missing, with a
+# globally unique state_bucket_name and github_repository = "OWNER/REPO".
 cd .. && AWS_REGION=eu-west-1 ./bootstrap.sh
 cd shared && terraform plan -out tfplan && terraform apply tfplan
 ```
@@ -104,7 +105,9 @@ If `main` is branch-protected, allow `github-actions[bot]` to push to it, becaus
 **4. Service stack:**
 ```bash
 cd terraform/service
-cp backend.hcl.example backend.hcl && cp dev.tfvars terraform.tfvars   # fill both in
+cp backend-dev.hcl backend.hcl
+cp dev.tfvars terraform.tfvars
+# Edit terraform.tfvars: use your shared state bucket, API CIDR, domain, and hosted-zone ID.
 terraform init -backend-config=backend.hcl
 terraform plan -out tfplan && terraform apply tfplan
 ```

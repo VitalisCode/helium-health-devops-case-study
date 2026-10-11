@@ -1,5 +1,6 @@
 # EKS Auto Mode: AWS manages nodes (Karpenter-based), core add-ons, the load balancer
 # controller and Pod Identity. No node groups or controller Helm charts to operate.
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"

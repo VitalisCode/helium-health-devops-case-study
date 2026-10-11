@@ -8,7 +8,7 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: https://github.com/OWNER/REPO.git # REPLACE
+    repoURL: https://github.com/VitalisCode/helium-health-devops-case-study
     targetRevision: main
     path: k8s/app
   destination:
