@@ -5,7 +5,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/shared"
-[ -f terraform.tfvars ] || { echo "Create terraform.tfvars first (see dev.tfvars)"; exit 1; }
+[ -f terraform.tfvars ] || { echo "Create terraform.tfvars first with your development values"; exit 1; }
 
 BUCKET="$(awk -F'"' '/^state_bucket_name/ {print $2}' terraform.tfvars)"
 REGION="${AWS_REGION:-eu-west-1}"

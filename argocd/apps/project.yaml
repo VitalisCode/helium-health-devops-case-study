@@ -9,7 +9,7 @@ metadata:
 spec:
   description: Platform add-ons and services on this cluster
   sourceRepos:
-    - https://github.com/OWNER/REPO.git # REPLACE
+    - https://github.com/VitalisCode/helium-health-devops-case-study
     - https://charts.external-secrets.io
   destinations:
     - server: https://kubernetes.default.svc

@@ -6,6 +6,9 @@ provider "aws" {
   }
 }
 
+# This Terraform code is used to retrieve the AWS Availability Zones (AZs) that are available in your AWS region,
+# while filtering out zones that require an explicit opt-in to use.
+
 data "aws_availability_zones" "available" {
   state = "available"
 
@@ -46,7 +49,7 @@ module "vpc" {
 
   enable_nat_gateway     = true
   single_nat_gateway     = var.single_nat_gateway
-  one_nat_gateway_per_az = !var.single_nat_gateway
+  one_nat_gateway_per_az = !var.single_nat_gateway # false means per-AZ gateways; true means one shared gateway.
 
   enable_flow_log                                 = true
   create_flow_log_cloudwatch_log_group            = true

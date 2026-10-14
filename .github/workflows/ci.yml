@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     paths-ignore: ["terraform/**", "k8s/**", "argocd/**", "**.md"]
+
   push:
     branches: [main]
     paths-ignore: ["terraform/**", "k8s/**", "argocd/**", "**.md"]

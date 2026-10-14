@@ -1,4 +1,3 @@
-# Cluster-level setup for EKS Auto Mode, managed by Argo CD (argocd/apps/platform.yaml).
 
 # Auto Mode only enforces Kubernetes NetworkPolicy once this controller is switched on.
 apiVersion: v1
@@ -8,6 +7,8 @@ metadata:
   namespace: kube-system
 data:
   enable-network-policy-controller: "true"
+
+
 ---
 # ALB settings for every Ingress that uses this class (Auto Mode provisions the ALB itself).
 apiVersion: eks.amazonaws.com/v1
@@ -20,6 +21,8 @@ spec:
   certificateARNs:
     # Terraform output acm_certificate_arn (terraform/service).
     - arn:aws:acm:eu-west-1:ACCOUNT_ID:certificate/REPLACE_ME
+
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
